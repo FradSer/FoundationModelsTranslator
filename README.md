@@ -1,22 +1,23 @@
 # FoundationModelsTranslator
 
-A native macOS app for English to Chinese translation powered by Apple's FoundationModels framework with SwiftUI interface.
+A native macOS app for English to Chinese translation powered by Apple's FoundationModels framework with modern SwiftUI interface.
 
 ## Features
 
-- **Real-time Translation**: Stream translation results as they're generated using FoundationModels
-- **Custom Adapter Support**: Specialized English to Chinese translation adapter for enhanced quality
-- **Translation History**: Track and search through previous translations
-- **Confidence Scoring**: Get confidence ratings for translation quality
-- **Cultural Notes**: Contextual explanations for cultural adaptations
-- **Native SwiftUI Interface**: Modern macOS design with responsive layout
+- **🔄 Real-time Streaming Translation**: Watch translations generate in real-time using FoundationModels streaming API
+- **🎯 Custom Adapter Integration**: Specialized English to Chinese translation adapter trained on web search content
+- **📚 Translation History**: Comprehensive history with search functionality and export options
+- **📊 Confidence Scoring**: AI-powered confidence ratings for translation quality assessment
+- **🌏 Cultural Context**: Contextual notes explaining cultural adaptations and nuances
+- **💻 Native macOS Interface**: Modern SwiftUI design optimized for macOS with responsive layout
+- **📋 Smart Copy Features**: One-click copying with clipboard integration for both platforms
 
 ## Requirements
 
-- macOS 14.0+ (Sonoma)
-- Xcode 15.0+
-- Swift 5.9+
-- FoundationModels framework
+- **macOS 15.0+** (Sequoia) - Required for FoundationModels framework
+- **Xcode 16.0+** - Latest development tools
+- **Swift 6.0+** - Modern Swift with concurrency support
+- **FoundationModels framework** - Apple's on-device AI framework
 
 ## Architecture
 
@@ -41,9 +42,15 @@ The app follows clean architecture principles with clear separation of concerns:
   - Real-time progress indication
   - Cross-platform clipboard support
 
-### Custom Adapter
+### Custom Translation Adapter
 
-The app includes a specialized English to Chinese translation adapter (`translation_en_zh_CN.fmadapter`) for improved translation quality in specific domains.
+The app includes a specialized LoRA adapter (`translation_en_zh_CN.fmadapter`) specifically trained for English to Chinese translation:
+
+- **Model**: Based on FradSer/DeepSeek-R1-Distilled-Translate-en-zh_CN-39k-Alpaca-GPT4
+- **Domain**: Optimized for web search content translation
+- **LoRA Rank**: 32 for efficient fine-tuning
+- **Training Data**: 39k high-quality translation pairs
+- **Fallback Support**: Graceful degradation to base model if adapter fails
 
 ## Getting Started
 
@@ -64,25 +71,32 @@ The app includes a specialized English to Chinese translation adapter (`translat
 
 ## Testing
 
-The project includes comprehensive test coverage:
+The project includes basic test structure with room for expansion:
 
-### Unit Tests
-- **Model Tests**: Data structure validation
-- **Manager Tests**: Business logic and state management
-- **Error Handling**: Comprehensive error scenarios
-- **Integration Tests**: End-to-end workflow validation
+### Current Test Coverage
+- **Unit Tests** (`FoundationModelsTranslatorTests`): Basic test framework setup
+- **UI Tests** (`FoundationModelsTranslatorUITests`): Application launch and basic UI validation
+- **Launch Tests** (`FoundationModelsTranslatorUITestsLaunchTests`): App startup performance testing
 
-### UI Tests
-- **ContentView**: User interaction flows
-- **History View**: Navigation and search functionality
-- **Error States**: UI error handling
-
-Run tests with:
+### Running Tests
 ```bash
-⌘U in Xcode
-# or
-xcodebuild test -scheme FoundationModelsTranslator
+# Run all tests in Xcode
+⌘U
+
+# Run tests from command line
+xcodebuild test -scheme FoundationModelsTranslator -destination 'platform=macOS'
+
+# Run specific test target
+xcodebuild test -scheme FoundationModelsTranslator -destination 'platform=macOS' -only-testing:FoundationModelsTranslatorTests
 ```
+
+### Test Expansion Opportunities
+The current test structure provides a foundation for comprehensive testing including:
+- Translation model validation
+- Manager state testing
+- Error scenario handling
+- UI interaction flows
+- Integration testing
 
 ## Project Structure
 
@@ -109,39 +123,74 @@ FoundationModelsTranslator/
 4. **Access History**: Browse previous translations with search functionality
 5. **Copy Results**: Use context menus or copy buttons to export translations
 
-## Technical Details
+## Technical Implementation
 
 ### FoundationModels Integration
-- Uses `@Generable` protocol for structured output
-- Implements streaming with `LanguageModelSession`
-- Custom adapter integration with fallback support
-- Confidence scoring and cultural adaptation notes
+- **Structured Output**: Uses `@Generable` protocol with `@Guide` annotations for consistent translation results
+- **Streaming Support**: Real-time translation using `LanguageModelSession.streamResponse`
+- **Adapter Management**: Custom adapter loading with automatic fallback to base model
+- **Session Prewarming**: Performance optimization with `prewarm()` functionality
 
-### Error Handling
-- Adapter loading failures
-- Network connectivity issues
-- Translation service errors
-- User-friendly error messages
+### Architecture Patterns
+- **@Observable**: Modern SwiftUI state management for reactive UI updates
+- **@MainActor**: Thread-safe UI operations with async/await patterns
+- **Error Handling**: Comprehensive `TranslationError` enum with localized descriptions
+- **Clean Architecture**: Separation of data models, business logic, and UI components
 
-### Performance
-- Efficient streaming implementation
-- Memory management for large histories
-- Responsive UI during long translations
+### Data Flow
+```swift
+TranslationRequest → TranslationManager → FoundationModels → TranslationResult → UI Update
+```
+
+### Performance Optimizations
+- Async/await pattern for non-blocking translation operations
+- Streaming results for immediate user feedback
+- Efficient memory management for translation history
+- Background session initialization for faster startup
+
+### Platform Integration
+- **Cross-platform Clipboard**: Automatic detection of UIKit/AppKit for copy operations
+- **Native UI Components**: SwiftUI with platform-specific styling
+- **File System Access**: Secure adapter file loading from app bundle
+
+## Development Notes
+
+### Adapter File Management
+The translation adapter weights file (`adapter_weights.bin`) is excluded from the repository due to GitHub's 100MB file size limit. To use the full adapter functionality:
+
+1. Obtain the adapter weights file separately
+2. Place it in `FoundationModelsTranslator/translation_en_zh_CN.fmadapter/`
+3. The app will automatically detect and use the adapter, or fall back to the base model
+
+### Code Statistics
+- **Total Swift Code**: ~815 lines
+- **Core Components**: 5 main Swift files
+- **Test Structure**: 3 test files (expandable)
+- **Architecture**: Clean, modular design
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Follow conventional commit format (`feat:`, `fix:`, `docs:`, etc.)
+4. Ensure all tests pass: `⌘U` in Xcode
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+### Development Guidelines
+- Use SwiftUI best practices
+- Follow Swift concurrency patterns with async/await
+- Maintain clean architecture separation
+- Add tests for new functionality
+- Update documentation for API changes
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 ## Acknowledgments
 
-- Apple's FoundationModels framework
-- SwiftUI for the native interface
-- Chinese language processing community
+- **Apple's FoundationModels Framework** - Enabling on-device AI translation
+- **SwiftUI** - Modern declarative UI framework
+- **DeepSeek-R1 Model** - Base model for custom adapter training
+- **Chinese NLP Community** - Advancing language processing technology
