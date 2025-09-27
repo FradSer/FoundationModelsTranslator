@@ -4,13 +4,13 @@ A native macOS app for English to Chinese translation powered by Apple's Foundat
 
 ## Features
 
-- **🔄 Real-time Streaming Translation**: Watch translations generate in real-time using FoundationModels streaming API
-- **🎯 Custom Adapter Integration**: Specialized English to Chinese translation adapter trained on web search content
-- **📚 Translation History**: Comprehensive history with search functionality and export options
-- **📊 Confidence Scoring**: AI-powered confidence ratings for translation quality assessment
-- **🌏 Cultural Context**: Contextual notes explaining cultural adaptations and nuances
-- **💻 Native macOS Interface**: Modern SwiftUI design optimized for macOS with responsive layout
-- **📋 Smart Copy Features**: One-click copying with clipboard integration for both platforms
+- **Real-time Streaming Translation**: Watch translations generate in real-time using FoundationModels streaming API
+- **Custom Adapter Integration**: Specialized English to Chinese translation adapter trained on web search content
+- **Translation History**: Comprehensive history with search functionality and export options
+- **Confidence Scoring**: AI-powered confidence ratings for translation quality assessment
+- **Cultural Context**: Contextual notes explaining cultural adaptations and nuances
+- **Native macOS Interface**: Modern SwiftUI design optimized for macOS with responsive layout
+- **Smart Copy Features**: One-click copying with clipboard integration for both platforms
 
 ## Requirements
 
