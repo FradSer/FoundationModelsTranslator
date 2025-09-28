@@ -156,6 +156,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(result.translatedText)
                 .font(.body)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.systemGreen).opacity(0.1))
@@ -194,6 +195,7 @@ struct ContentView: View {
     private func partialTranslationView(_ partial: TranslationResult.PartiallyGenerated) -> some View {
         Text(partial.translatedText ?? "")
             .font(.body)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(NSColor.controlBackgroundColor))
@@ -212,16 +214,20 @@ struct ContentView: View {
 
             if let lastTranslation = translationManager.translations.last,
                let result = lastTranslation.result {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(lastTranslation.request.sourceText)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(lastTranslation.request.sourceText)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                    Text(result.translatedText)
-                        .font(.body)
-                        .lineLimit(3)
+                        Text(result.translatedText)
+                            .font(.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxHeight: 120)
                 .padding(10)
                 .background(Color(NSColor.controlBackgroundColor))
                 .cornerRadius(8)
