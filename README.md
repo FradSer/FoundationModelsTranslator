@@ -9,15 +9,16 @@ A native macOS app for English to Chinese translation powered by Apple's Foundat
 - **Translation History**: Comprehensive history with search functionality and export options
 - **Confidence Scoring**: AI-powered confidence ratings for translation quality assessment
 - **Cultural Context**: Contextual notes explaining cultural adaptations and nuances
-- **Native macOS Interface**: Modern SwiftUI design optimized for macOS with responsive layout
+- **Native macOS Interface**: Modern SwiftUI design with Liquid Glass elements optimized for macOS
 - **Smart Copy Features**: One-click copying with clipboard integration for both platforms
 
 ## Requirements
 
-- **macOS 15.0+** (Sequoia) - Required for FoundationModels framework
-- **Xcode 16.0+** - Latest development tools
-- **Swift 6.0+** - Modern Swift with concurrency support
+- **macOS 26+** (Tahoe) - Required for FoundationModels framework
+- **Xcode 26.0.1+** - Latest development tools with AI integration
+- **Swift 6.2+** - Enhanced Swift with advanced concurrency support
 - **FoundationModels framework** - Apple's on-device AI framework
+- **Note**: macOS 26 Tahoe is the final version supporting Intel processors
 
 ## Architecture
 
