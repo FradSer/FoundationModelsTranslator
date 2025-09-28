@@ -47,11 +47,40 @@ The app follows clean architecture principles with clear separation of concerns:
 
 The app includes a specialized LoRA adapter (`translation_en_zh_CN.fmadapter`) specifically trained for English to Chinese translation:
 
-- **Model**: Based on FradSer/DeepSeek-R1-Distilled-Translate-en-zh_CN-39k-Alpaca-GPT4
-- **Domain**: Optimized for web search content translation
+#### Model Architecture
+- **Base Model**: DeepSeek-R1 Distilled for translation tasks
 - **LoRA Rank**: 32 for efficient fine-tuning
-- **Training Data**: 39k high-quality translation pairs
+- **Domain**: Optimized for web search content translation
 - **Fallback Support**: Graceful degradation to base model if adapter fails
+
+#### Training Dataset (100K Samples)
+The adapter was trained using a multi-dataset approach combining high-quality translation pairs:
+
+**Primary Dataset** (39K samples - 100% retention):
+- `FradSer/DeepSeek-R1-Distilled-Translate-en-zh_CN-39k-Alpaca-GPT4-without-Think`
+- High-quality English-Chinese translation pairs
+- Alpaca-GPT4 generated content optimized for accuracy
+
+**Supplementary Datasets** (61K samples - intelligent sampling):
+- `shareAI/ShareGPT-Chinese-English-90k` - Conversational translation data
+- `Nexdata/Chinese-English_Parallel_Corpus_Data` - Professional parallel corpus
+
+#### Data Processing Pipeline
+```bash
+python -m translation.translation_data \
+    --dataset-names \
+        "FradSer/DeepSeek-R1-Distilled-Translate-en-zh_CN-39k-Alpaca-GPT4-without-Think" \
+        "shareAI/ShareGPT-Chinese-English-90k" \
+        "Nexdata/Chinese-English_Parallel_Corpus_Data" \
+    --total-target-samples 100000
+```
+
+**Smart Data Processing Features**:
+- **Multi-source Integration**: Downloads and combines multiple HuggingFace datasets
+- **Intelligent Sampling**: Primary dataset fully retained, others sampled to reach 100K total
+- **Web Search Filtering**: Content filtering optimized for web search translation scenarios
+- **Format Standardization**: Automatic message format conversion across all sources
+- **Data Split**: 90/10 train/validation split for optimal model performance
 
 ## Getting Started
 
@@ -168,6 +197,8 @@ The translation adapter weights file (`adapter_weights.bin`) is excluded from th
 - **Core Components**: 5 main Swift files
 - **Test Structure**: 3 test files (expandable)
 - **Architecture**: Clean, modular design
+- **Training Data**: 100K translation pairs across 3 datasets
+- **Model Size**: ~10MB memory footprint (LoRA adapter)
 
 ## Contributing
 
