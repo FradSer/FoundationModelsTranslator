@@ -65,16 +65,6 @@ The adapter was trained using a multi-dataset approach combining high-quality tr
 - `shareAI/ShareGPT-Chinese-English-90k` - Conversational translation data
 - `Nexdata/Chinese-English_Parallel_Corpus_Data` - Professional parallel corpus
 
-#### Data Processing Pipeline
-```bash
-python -m translation.translation_data \
-    --dataset-names \
-        "FradSer/DeepSeek-R1-Distilled-Translate-en-zh_CN-39k-Alpaca-GPT4-without-Think" \
-        "shareAI/ShareGPT-Chinese-English-90k" \
-        "Nexdata/Chinese-English_Parallel_Corpus_Data" \
-    --total-target-samples 100000
-```
-
 **Smart Data Processing Features**:
 - **Multi-source Integration**: Downloads and combines multiple HuggingFace datasets
 - **Intelligent Sampling**: Primary dataset fully retained, others sampled to reach 100K total
