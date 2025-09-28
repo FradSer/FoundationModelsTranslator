@@ -9,7 +9,7 @@
         "training_dataset": "FradSer/DeepSeek-R1-Distilled-Translate-en-zh_CN-39k-Alpaca-GPT4-without-Think",
         "use_case": "web_search_translation"
     },
-    "description": "English to Chinese translation adapter optimized for web search content",
+    "description": "Enhanced English-Chinese translation adapter trained on 100K multi-dataset samples",
     "license": "MIT",
     "loraRank": 32,
     "speculativeDecodingDraftTokenCount": 5
