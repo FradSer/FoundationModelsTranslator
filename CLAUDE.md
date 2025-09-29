@@ -7,60 +7,63 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # Build and run
 xcodebuild -scheme FoundationModelsTranslator -configuration Debug build
-# Run tests
-xcodebuild test -scheme FoundationModelsTranslator -destination 'platform=macOS'
-# Debug logs
-log stream --predicate 'subsystem == "FoundationModelsTranslator"'
+# Run specific tests
+xcodebuild test -scheme FoundationModelsTranslator -only-testing:FoundationModelsTranslatorTests
+# Debug logs with subsystem filtering
+log stream --predicate 'subsystem == "FoundationModelsTranslator"' --level debug
+# Check adapter presence
+ls -la FoundationModelsTranslator/translation_en_zh_CN.fmadapter/
 ```
 
-## Critical Architecture Patterns
+## Critical Architecture Constraints
 
-### Structured Generation with Streaming States
-- `@Generable` structs define LLM output structure, auto-generate `PartiallyGenerated` types
-- UI handles dual states: `TranslationResult.PartiallyGenerated` → `TranslationResult`
-- Property declaration order in `@Generable` matters - generated sequentially
-- Stream updates via `currentTranslation`, completed results stored in `translations` array
+### Dual-State Streaming Pattern
+- **UI Identity Crisis**: `currentTranslation` (PartiallyGenerated) → `translations` array (completed) requires UUID-based identity preservation
+- **Property Order Dependency**: `@Generable` struct property declaration order determines LLM generation sequence - place critical fields last
+- **State Transition Logic**: `TranslationManager:96-118` handles partial→complete with array replacement using UUID matching
 
-### Transparent Adapter Fallback
-- Attempts custom LoRA adapter load: `translation_en_zh_CN.fmadapter`
-- Silent fallback to base `SystemLanguageModel` with identical instructions
-- Both paths use same `LanguageModelSession` interface - transparent to UI
-- Adapter metadata: LoRA rank 32, speculative decoding (5 draft tokens)
+### FoundationModels Session Constraints
+- **Main Thread Lock**: `@MainActor` required on `TranslationManager` - sessions cannot be passed between actors or used in background contexts
+- **Session Lifecycle**: `prewarm()` must occur before first translation to avoid 3-5 second cold start delay
+- **Memory Boundaries**: Each session maintains its own context - cannot share state across multiple managers
 
-### Threading Constraints
-- `TranslationManager` requires `@MainActor` - FoundationModels sessions are main-thread only
-- Cannot pass sessions between actors or use in background contexts
-- All streaming updates automatically main-thread safe
+### Transparent Adapter Fallback Architecture
+- **Silent Degradation**: Adapter loading failure at `TranslationManager:24-47` triggers transparent fallback with identical Chinese instructions
+- **Bundle Resource Pattern**: `Bundle.main.url(forResource:withExtension:)` for `.fmadapter` detection - no filesystem checks needed
+- **Instruction Duplication**: Chinese prompts duplicated in both adapter/fallback paths ensures behavior consistency regardless of adapter availability
 
-## Critical Integration Points
+## Critical Implementation Patterns
 
-### Session Initialization Pattern
+### Streaming State Management
 ```swift
-// ContentView.onAppear
-translationManager.prewarm()  // Essential for first-translation performance
+// TranslationManager.swift:82-98 - Streaming with state preservation
+let stream = session.streamResponse(generating: TranslationResult.self, includeSchemaInPrompt: false)
+for try await partialResponse in stream {
+    currentTranslation = partialResponse.content  // Real-time UI updates
+}
+// Completed translation replaces loading entry using UUID matching
 ```
 
-### Structured Prompt Engineering
-Chinese instructions duplicated in both adapter/fallback paths ensure consistent behavior regardless of adapter availability.
-
-### Cross-Platform Clipboard
+### Cross-Platform Conditional Compilation
 ```swift
+// Used in ContentView.swift:173-177 and TranslationHistoryView.swift:141-159
 #if canImport(UIKit)
-UIPasteboard.general.string = result.translatedText
+UIPasteboard.general.string = text
 #elseif canImport(AppKit)
-NSPasteboard.general.setString(result.translatedText, forType: .string)
+NSPasteboard.general.setString(text, forType: .string)
 #endif
 ```
 
-## File Constraints
+### Error Context Preservation
+- **Async Error Propagation**: Errors set on `TranslationManager.error` property trigger SwiftUI alert binding
+- **Silent Adapter Failures**: Adapter load failures logged but don't block session creation - app remains functional
 
-- `adapter_weights.bin` (133MB) excluded from git - GitHub 100MB limit
-- Check adapter presence: `Bundle.main.url(forResource: "translation_en_zh_CN", withExtension: "fmadapter")`
-- Production deployment: Use Asset Packs for runtime adapter download
+## File System Constraints
 
-## Testing Framework
+- **Git Exclusion**: `adapter_weights.bin` (133MB) exceeds GitHub 100MB limit - excluded via .gitignore
+- **Adapter Metadata**: LoRA rank 32, 5 draft tokens for speculative decoding in `metadata.json`
+- **Bundle Resource Detection**: Use `Bundle.main.url()` not filesystem existence checks for adapter presence
 
-Swift Testing (`@Test`) used instead of XCTest. Test single target:
-```bash
-xcodebuild test -scheme FoundationModelsTranslator -only-testing:FoundationModelsTranslatorTests
-```
+## Testing Architecture
+
+Swift Testing framework (`@Test`) replaces XCTest - parallel execution enabled by default. Test data models only - FoundationModels sessions cannot be mocked due to `@MainActor` requirements.
