@@ -28,13 +28,19 @@ struct TranslationHistoryView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if translations.isEmpty {
-                    emptyStateView
+            List {
+                if filteredTranslations.isEmpty {
+                    Section {
+                        emptyStateView
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
                 } else {
-                    translationListView
+                    ForEach(filteredTranslations, id: \.id) { translation in
+                        TranslationHistoryRowView(translation: translation)
+                    }
                 }
             }
+            .listStyle(.plain)
             .navigationTitle("Translation History")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -65,12 +71,6 @@ struct TranslationHistoryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var translationListView: some View {
-        List(filteredTranslations, id: \.id) { translation in
-            TranslationHistoryRowView(translation: translation)
-        }
-        .listStyle(PlainListStyle())
-    }
 }
 
 struct TranslationHistoryRowView: View {
@@ -118,9 +118,6 @@ struct TranslationHistoryRowView: View {
                         Text(notes)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .padding(8)
-                            .background(Color(.systemBlue).opacity(0.1))
-                            .cornerRadius(6)
                     }
                 } else if translation.isLoading {
                     HStack {
@@ -134,8 +131,7 @@ struct TranslationHistoryRowView: View {
                 }
             }
         }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
+        .padding(.vertical, 8)
         .contextMenu {
             if let result = translation.result {
                 Button(action: {
