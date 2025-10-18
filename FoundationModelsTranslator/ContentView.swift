@@ -6,8 +6,6 @@
 //
 
 import SwiftUI
-
-import SwiftUI
 #if canImport(UIKit)
 import UIKit
 #elseif canImport(AppKit)
@@ -21,27 +19,29 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                translationHeader
+            Form {
+                Section {
+                    translationHeader
+                }
 
-                inputSection
+                Section("English Text") {
+                    inputSection
+                }
 
-                if translationManager.isLoading {
-                    loadingSection
-                } else if let currentTranslation = translationManager.currentTranslation {
-                    translationOutputSection(currentTranslation)
+                Section("Chinese Translation") {
+                    translationSection
                 }
 
                 if !translationManager.translations.isEmpty {
-                    historySection
+                    Section("Recent Translation") {
+                        historyPreview
+                    }
                 }
-
-                Spacer()
             }
-            .padding()
-            .navigationTitle("翻译器 Translator")
+            .formStyle(.grouped)
+            .navigationTitle("Translator")
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: .automatic) {
                     Button("History") {
                         showingHistory = true
                     }
@@ -68,11 +68,7 @@ struct ContentView: View {
 
     private var translationHeader: some View {
         VStack(spacing: 8) {
-            Text("English → 中文")
-                .font(.headline)
-                .foregroundColor(.secondary)
-
-            Text("Enter English text to translate to Chinese")
+            Text("输入英文文本，翻译成中文 | Enter English text to translate to Chinese")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -80,22 +76,24 @@ struct ContentView: View {
     }
 
     private var inputSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("English Text")
-                .font(.headline)
-                .foregroundColor(.primary)
+        return VStack(alignment: .leading, spacing: 12) {
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Material.regularMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    )
 
-            TextEditor(text: $inputText)
-                .frame(minHeight: 120)
-                .padding(12)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                )
+                TextEditor(text: $inputText)
+                    .frame(minHeight: 160)
+                    .font(.body)
+                    .padding(8)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+            }
 
-            HStack {
+            HStack(spacing: 12) {
                 Button("Clear") {
                     inputText = ""
                 }
@@ -114,30 +112,37 @@ struct ContentView: View {
         }
     }
 
-    private var loadingSection: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.2)
+    private var translationSection: some View {
+        Group {
+            if translationManager.isLoading {
+                loadingView
+            } else if let currentTranslation = translationManager.currentTranslation {
+                translationOutputSection(currentTranslation)
+            } else {
+                Text("Translation will appear here after you translate.")
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
 
-            Text("Translating...")
-                .font(.headline)
+    private var loadingView: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .controlSize(.regular)
+
+            Text("Translating…")
+                .font(.subheadline)
                 .foregroundColor(.secondary)
 
             if let partial = translationManager.currentTranslation {
                 partialTranslationView(partial)
             }
         }
-        .padding()
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(12)
+        .transition(.opacity.combined(with: .scale))
     }
 
     private func translationOutputSection(_ translation: TranslationResult.PartiallyGenerated) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Chinese Translation")
-                .font(.headline)
-                .foregroundColor(.primary)
-
             if let translatedText = translation.translatedText,
                let confidence = translation.confidence {
                 let finalResult = TranslationResult(
@@ -153,16 +158,18 @@ struct ContentView: View {
     }
 
     private func finalTranslationView(_ result: TranslationResult) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(result.translatedText)
-                .font(.body)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.systemGreen).opacity(0.1))
-                .cornerRadius(12)
+        let notesDescriptor = GlassDesign.descriptor(for: .listBackdrop)
 
-            HStack {
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(result.translatedText)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .lineSpacing(4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .glassSurface(.outputAccent)
+
+            HStack(spacing: 12) {
                 Label("Confidence: \(Int(result.confidence * 100))%", systemImage: "checkmark.circle")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -183,57 +190,55 @@ struct ContentView: View {
 
             if let notes = result.notes, !notes.isEmpty {
                 Text(notes)
-                    .font(.caption)
+                    .font(.footnote)
                     .foregroundColor(.secondary)
-                    .padding(8)
-                    .background(Color(.systemBlue).opacity(0.1))
-                    .cornerRadius(8)
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: notesDescriptor.cornerRadius, style: .continuous)
+                            .fill(notesDescriptor.material.material)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: notesDescriptor.cornerRadius, style: .continuous)
+                                    .stroke(Color.white.opacity(notesDescriptor.strokeOpacity))
+                            )
+                    )
             }
         }
     }
 
     private func partialTranslationView(_ partial: TranslationResult.PartiallyGenerated) -> some View {
-        Text(partial.translatedText ?? "")
+        return Text(partial.translatedText ?? "")
             .font(.body)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(12)
+            .lineSpacing(4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-            )
+            .padding(12)
+            .glassSurface(.outputAccent)
     }
 
-    private var historySection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Recent Translation")
-                .font(.subheadline)
-                .fontWeight(.medium)
-
+    private var historyPreview: some View {
+        Group {
             if let lastTranslation = translationManager.translations.last,
                let result = lastTranslation.result {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(lastTranslation.request.sourceText)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(lastTranslation.timestamp, style: .time)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
 
-                        Text(result.translatedText)
-                            .font(.body)
-                            .fixedSize(horizontal: false, vertical: true)
+                    Text(lastTranslation.request.sourceText)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+
+                    Text(result.translatedText)
+                        .font(.body)
+
+                    Button {
+                        showingHistory = true
+                    } label: {
+                        Label("Open full history", systemImage: "clock.arrow.circlepath")
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .buttonStyle(.link)
                 }
-                .frame(maxHeight: 120)
-                .padding(10)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
-                .onTapGesture {
-                    showingHistory = true
-                }
+            } else {
+                EmptyView()
             }
         }
     }
