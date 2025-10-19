@@ -11,7 +11,6 @@ import OSLog
 @MainActor
 final class TranslationManager {
     private(set) var currentTranslation: TranslationResult.PartiallyGenerated?
-    private(set) var translations: [Translation] = []
     private var session: LanguageModelSession
 
     var error: Error?
@@ -75,9 +74,6 @@ final class TranslationManager {
 
         logger.info("Starting translation for text: \(request.sourceText.prefix(50))...")
 
-        let translation = Translation(request: request, isLoading: true)
-        translations.append(translation)
-
         do {
             let stream = session.streamResponse(
                 generating: TranslationResult.self,
@@ -97,25 +93,7 @@ final class TranslationManager {
                 currentTranslation = partialResponse.content
             }
 
-            if let translatedText = currentTranslation?.translatedText,
-               let confidence = currentTranslation?.confidence {
-                let finalResult = TranslationResult(
-                    translatedText: translatedText,
-                    confidence: confidence,
-                    notes: currentTranslation?.notes
-                )
-
-                let completedTranslation = Translation(
-                    request: request,
-                    result: finalResult
-                )
-
-                if let index = translations.firstIndex(where: { $0.id == translation.id }) {
-                    translations[index] = completedTranslation
-                }
-
-                logger.info("Translation completed successfully")
-            }
+            logger.info("Translation completed successfully")
 
         } catch {
             self.error = error
@@ -128,11 +106,6 @@ final class TranslationManager {
 
     func prewarm() {
         session.prewarm()
-    }
-
-    func clearHistory() {
-        translations.removeAll()
-        currentTranslation = nil
     }
 }
 

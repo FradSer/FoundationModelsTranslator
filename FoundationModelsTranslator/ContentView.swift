@@ -15,7 +15,6 @@ import AppKit
 struct ContentView: View {
     @State private var translationManager = TranslationManager()
     @State private var inputText = ""
-    @State private var showingHistory = false
 
     var body: some View {
         NavigationStack {
@@ -31,26 +30,12 @@ struct ContentView: View {
                 Section("Chinese Translation") {
                     translationSection
                 }
-
-                if !translationManager.translations.isEmpty {
-                    Section("Recent Translation") {
-                        historyPreview
-                    }
-                }
             }
             .formStyle(.grouped)
             .navigationTitle("Translator")
             .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button("History") {
-                        showingHistory = true
-                    }
-                }
             }
-            .sheet(isPresented: $showingHistory) {
-                TranslationHistoryView(translations: translationManager.translations)
-            }
-            .alert("Translation Error", isPresented: .constant(translationManager.error != nil)) {
+              .alert("Translation Error", isPresented: .constant(translationManager.error != nil)) {
                 Button("OK") {
                     translationManager.error = nil
                 }
@@ -137,6 +122,7 @@ struct ContentView: View {
                 partialTranslationView(partial)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .center)
         .transition(.opacity.combined(with: .scale))
     }
 
@@ -169,7 +155,7 @@ struct ContentView: View {
                 .glassSurface(.outputAccent)
 
             HStack(spacing: 12) {
-                Label("Confidence: \(Int(result.confidence * 100))%", systemImage: "checkmark.circle")
+                Label("Confidence: \(Int(max(0, min(100, result.confidence))))%", systemImage: "checkmark.circle")
                     .font(.caption)
                     .foregroundColor(.secondary)
 
@@ -213,35 +199,7 @@ struct ContentView: View {
             .glassSurface(.outputAccent)
     }
 
-    private var historyPreview: some View {
-        Group {
-            if let lastTranslation = translationManager.translations.last,
-               let result = lastTranslation.result {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(lastTranslation.timestamp, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    Text(lastTranslation.request.sourceText)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-
-                    Text(result.translatedText)
-                        .font(.body)
-
-                    Button {
-                        showingHistory = true
-                    } label: {
-                        Label("Open full history", systemImage: "clock.arrow.circlepath")
-                    }
-                    .buttonStyle(.link)
-                }
-            } else {
-                EmptyView()
-            }
-        }
-    }
-
+    
     private func performTranslation() async {
         let request = TranslationRequest(
             sourceText: inputText.trimmingCharacters(in: .whitespacesAndNewlines)

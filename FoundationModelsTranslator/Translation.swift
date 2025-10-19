@@ -37,20 +37,6 @@ struct TranslationResult {
     }
 }
 
-struct Translation {
-    let id: UUID = UUID()
-    let request: TranslationRequest
-    let result: TranslationResult?
-    let timestamp: Date
-    let isLoading: Bool
-
-    init(request: TranslationRequest, result: TranslationResult? = nil, isLoading: Bool = false) {
-        self.request = request
-        self.result = result
-        self.timestamp = Date()
-        self.isLoading = isLoading
-    }
-}
 
 extension TranslationResult {
     static let example = TranslationResult(
