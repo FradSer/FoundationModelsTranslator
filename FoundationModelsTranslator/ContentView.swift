@@ -45,7 +45,6 @@ struct ContentView: View {
                     Button("History") {
                         showingHistory = true
                     }
-                    .disabled(translationManager.translations.isEmpty)
                 }
             }
             .sheet(isPresented: $showingHistory) {
