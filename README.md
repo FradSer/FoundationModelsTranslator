@@ -6,6 +6,8 @@
 
 A native macOS app for English to Chinese translation powered by Apple's FoundationModels framework with modern SwiftUI interface.
 
+![FoundationModelsTranslator Screenshot](cover.png)
+
 ## Features
 
 - **Real-time Streaming Translation**: Watch translations generate in real-time using FoundationModels streaming API

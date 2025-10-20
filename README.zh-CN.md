@@ -6,6 +6,8 @@
 
 一款基于 Apple FoundationModels 框架构建的原生 macOS 英中翻译应用，采用现代化 SwiftUI 界面设计。
 
+![FoundationModelsTranslator 截图](cover.png)
+
 ## 功能特性
 
 - **实时流式翻译**：通过 FoundationModels 流式 API 观察翻译实时生成过程
