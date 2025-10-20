@@ -7,88 +7,138 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # Build and run
 xcodebuild -scheme FoundationModelsTranslator -configuration Debug build
+open FoundationModelsTranslator.xcodeproj  # Opens in Xcode for development
 
-# Run specific tests
+# Testing
+xcodebuild test -scheme FoundationModelsTranslator -destination 'platform=macOS'
 xcodebuild test -scheme FoundationModelsTranslator -only-testing:FoundationModelsTranslatorTests
+⌘U  # Run all tests in Xcode
 
-# Debug logs with subsystem filtering
+# Debug and monitoring
 log stream --predicate 'subsystem == "FoundationModelsTranslator"' --level debug
 
-# Check adapter presence and file structure
+# Adapter file verification
 ls -la FoundationModelsTranslator/translation_en_zh_CN.fmadapter/
 file FoundationModelsTranslator/translation_en_zh_CN.fmadapter/adapter_weights.bin
 
-# Run all tests via Xcode
-⌘U
-
-# Run tests from command line
-xcodebuild test -scheme FoundationModelsTranslator -destination 'platform=macOS'
-
-# Open project in Xcode
-open FoundationModelsTranslator.xcodeproj
+# Translation adapter training (reproduction)
+cd /Users/FradSer/Downloads/adapter_training_toolkit_v26_0_0/translation/
+./train_translation.sh  # Complete automated training
 ```
 
-## Critical Architecture Constraints
+## Architecture Overview
 
-### Dual-State Streaming Pattern
-- **UI Identity Crisis**: `currentTranslation` (PartiallyGenerated) → `translations` array (completed) requires UUID-based identity preservation
-- **Property Order Dependency**: `@Generable` struct property declaration order determines LLM generation sequence - place critical fields last
-- **State Transition Logic**: `TranslationManager:96-118` handles partial→complete with array replacement using UUID matching
+This is a native macOS translation app implementing **Clean Architecture** with FoundationModels integration:
 
-### FoundationModels Session Constraints
-- **Main Thread Lock**: `@MainActor` required on `TranslationManager` - sessions cannot be passed between actors or used in background contexts
-- **Session Lifecycle**: `prewarm()` must occur before first translation to avoid 3-5 second cold start delay
-- **Memory Boundaries**: Each session maintains its own context - cannot share state across multiple managers
+### Four-Layer Architecture
 
-### Transparent Adapter Fallback Architecture
-- **Silent Degradation**: Adapter loading failure at `TranslationManager:24-47` triggers transparent fallback with identical Chinese instructions
-- **Bundle Resource Pattern**: `Bundle.main.url(forResource:withExtension:)` for `.fmadapter` detection - no filesystem checks needed
-- **Instruction Duplication**: Chinese prompts duplicated in both adapter/fallback paths ensures behavior consistency regardless of adapter availability
+1. **Presentation Layer** (`ContentView.swift`)
+   - SwiftUI interface with `@Observable` state management
+   - Cross-platform clipboard handling (UIKit/AppKit conditional compilation)
+   - Real-time streaming translation display with glass morphism design
 
-## Critical Implementation Patterns
+2. **Application Layer** (`TranslationManager.swift`)
+   - `@MainActor` business logic with FoundationModels session management
+   - Adapter loading with transparent fallback to base model
+   - Streaming translation with state preservation
 
-### Streaming State Management
+3. **Domain Layer** (`Translation.swift`)
+   - Data models with `@Generable` annotations for structured AI output
+   - `TranslationRequest` and `TranslationResult` entities
+   - Error enumeration with localized descriptions
+
+4. **Infrastructure Layer**
+   - Custom LoRA adapter (`translation_en_zh_CN.fmadapter/`, 133MB)
+   - Bundle resource management for adapter loading
+   - Glass design system (`GlassDesign.swift`) for consistent UI styling
+
+## Critical Technical Constraints
+
+### FoundationModels Integration
+- **Main Thread Lock**: `TranslationManager` requires `@MainActor` - sessions cannot be passed between actors
+- **Session Lifecycle**: `prewarm()` must be called before first translation to avoid 3-5 second cold start
+- **Memory Boundaries**: Each session maintains isolated context - no state sharing across managers
+
+### Streaming Architecture Pattern
 ```swift
-// TranslationManager.swift:82-98 - Streaming with state preservation
+// TranslationManager.swift:82-98 - Real-time translation with state preservation
 let stream = session.streamResponse(generating: TranslationResult.self, includeSchemaInPrompt: false)
 for try await partialResponse in stream {
-    currentTranslation = partialResponse.content  // Real-time UI updates
+    currentTranslation = partialResponse.content  // Live UI updates
 }
-// Completed translation replaces loading entry using UUID matching
 ```
 
-### Cross-Platform Conditional Compilation
+### Transparent Adapter Fallback
+- **Silent Degradation**: Adapter loading failure triggers automatic fallback with identical Chinese instructions
+- **Bundle Resource Pattern**: Uses `Bundle.main.url(forResource:withExtension:)` for adapter detection
+- **Instruction Duplication**: Chinese prompts duplicated in both adapter/fallback paths ensure behavior consistency
+
+## Custom Translation Adapter
+
+### Technical Specifications
+- **Training**: Apple Foundation Models Adapter Training Toolkit
+- **Base Model**: DeepSeek-R1 Distilled optimized for translation
+- **LoRA Rank**: 32 for efficient fine-tuning (~133MB storage)
+- **Speculative Decoding**: 5 draft tokens for enhanced inference speed
+- **Training Dataset**: 100K samples across 3 datasets with intelligent sampling
+- **License**: MIT License
+
+### Training Pipeline Location
+```
+/Users/FradSer/Downloads/adapter_training_toolkit_v26_0_0/translation/
+```
+- Multi-dataset integration with automatic format standardization
+- Quality evaluation with BLEU scores and assessment metrics
+- Automated training with optimized hyperparameters
+
+## Glass Design System
+
+The `GlassDesign.swift` implements a sophisticated glass morphism system:
+- **Material Hierarchy**: `ultraThin`, `thin`, `regular` materials
+- **Surface Types**: `windowBackground`, `primarySurface`, `inputArea`, `outputAccent`, `listBackdrop`, `toolbarControl`
+- **Descriptor Pattern**: Centralized configuration for corner radius, shadow, and stroke opacity
+- **View Extension**: `.glassSurface(_:)` modifier for consistent application
+
+### Input Area Implementation
 ```swift
-// Used in ContentView.swift:173-177 and TranslationHistoryView.swift:141-159
+// ContentView.swift:82-98 - Glass input area with transparent TextEditor
+ZStack(alignment: .topLeading) {
+    RoundedRectangle(cornerRadius: 10, style: .continuous)
+        .fill(Material.regularMaterial)
+        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .stroke(Color.white.opacity(0.08), lineWidth: 1))
+
+    TextEditor(text: $inputText)
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
+}
+```
+
+## Cross-Platform Conditional Compilation
+
+```swift
 #if canImport(UIKit)
-UIPasteboard.general.string = text
+UIPasteboard.general.string = result.translatedText
 #elseif canImport(AppKit)
-NSPasteboard.general.setString(text, forType: .string)
+NSPasteboard.general.setString(result.translatedText, forType: .string)
 #endif
 ```
 
-### Error Context Preservation
-- **Async Error Propagation**: Errors set on `TranslationManager.error` property trigger SwiftUI alert binding
-- **Silent Adapter Failures**: Adapter load failures logged but don't block session creation - app remains functional
+## Testing Architecture
+
+Uses modern Swift Testing framework (`@Test`) instead of XCTest:
+- **Parallel Execution**: Enabled by default
+- **Model Validation**: Tests focus on `TranslationRequest`, `TranslationResult`, and `TranslationError` data structures
+- **No Session Mocking**: FoundationModels sessions cannot be mocked due to `@MainActor` requirements
 
 ## File System Constraints
 
-- **Git Exclusion**: `adapter_weights.bin` (133MB) exceeds GitHub 100MB limit - excluded via .gitignore
+- **Git Exclusion**: `adapter_weights.bin` (133MB) excluded via .gitignore due to GitHub 100MB limit
+- **Bundle Resource Detection**: Use `Bundle.main.url()` not filesystem existence checks
 - **Adapter Metadata**: LoRA rank 32, 5 draft tokens for speculative decoding in `metadata.json`
-- **Bundle Resource Detection**: Use `Bundle.main.url()` not filesystem existence checks for adapter presence
-
-## Testing Architecture
-
-Swift Testing framework (`@Test`) replaces XCTest - parallel execution enabled by default. Test data models only - FoundationModels sessions cannot be mocked due to `@MainActor` requirements.
-
-### Key Testing Limitations
-- **No Session Mocking**: FoundationModels sessions require main actor and real AI interactions
-- **Model Validation Focus**: Tests validate `TranslationRequest`, `TranslationResult`, and `Translation` data structures
-- **Error Handling Tests**: Localized error description validation via `TranslationError` enum
 
 ## Performance Optimization Patterns
 
-### Session Management
 ```swift
 // TranslationManager.swift:129-131 - Prewarming for performance
 func prewarm() {
@@ -96,35 +146,19 @@ func prewarm() {
 }
 ```
 
-### Memory Isolation
-- Each `TranslationManager` instance maintains isolated session context
-- No cross-manager state sharing prevents memory leaks and context contamination
-- Async/await pattern ensures non-blocking UI operations
+## Data Flow Architecture
+
+```
+TranslationRequest → TranslationManager → FoundationModels → TranslationResult → UI Update
+```
+
+- **Async/Await Pattern**: Non-blocking translation operations
+- **Streaming Results**: Immediate user feedback during translation
+- **Memory Isolation**: Each manager maintains isolated session context
+- **Error Context**: Async errors set on `TranslationManager.error` property trigger SwiftUI alert binding
 
 ## Development Workflow Integration
 
-### Debugging FoundationModels Integration
-- Use OSLog with subsystem "FoundationModelsTranslator" for session lifecycle tracking
-- Monitor adapter loading vs fallback behavior in console logs
-- Stream partial responses for real-time debugging of translation flow
-
-### Adapter Development Workflow
-1. Train adapter using external ML pipeline
-2. Generate `adapter_weights.bin` and `metadata.json`
-3. Place in `FoundationModelsTranslator/translation_en_zh_CN.fmadapter/`
-4. Test fallback behavior by temporarily removing adapter file
-5. Verify bundle loading via `Bundle.main.url()` detection pattern
-
-## Code Architecture Principles
-
-### Clean Architecture Implementation
-- **Data Layer**: `Translation.swift` - Request/Result models with `@Generable` annotations
-- **Business Layer**: `TranslationManager.swift` - FoundationModels session management
-- **Presentation Layer**: SwiftUI views with `@Observable` state management
-- **Dependency Rule**: Source code dependencies point only inward (UI → Manager → Models)
-
-### SwiftUI Integration Patterns
-- **@Observable**: Reactive state management replacing `@StateObject`/`@ObservedObject`
-- **@MainActor**: Ensures UI updates on main thread for FoundationModels compatibility
-- **NavigationStack**: Modern navigation with toolbar integration
-- **Conditional Compilation**: Cross-platform clipboard handling
+- **Debug Logging**: OSLog with subsystem "FoundationModelsTranslator" for session lifecycle tracking
+- **Adapter Loading**: Monitor console logs for adapter vs fallback behavior
+- **Stream Monitoring**: Real-time debugging of partial translation responses
